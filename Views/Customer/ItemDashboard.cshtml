@@ -1,0 +1,268 @@
+@{
+    ViewData["Title"] = "Admin Dashboard";
+    Layout="_AdminLayout";
+}
+<div style="display: flex;">
+    <button class="k-button k-button-solid-primary k-button-lg" id="addBtn">Add Item</button>
+    <h3 style="margin-left:30%">Admin Item Dashboard</h3>
+</div>
+<br><br>
+
+<div id="grid"></div>
+
+<div id="notification"></div>
+
+<div id="myModal">
+    <form id="addForm" method="post"></form>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            loadWindow();
+            loadForm();
+            loadGrid();
+
+            $("#addBtn").click(function () {
+                $("#addForm").getKendoForm().setOptions({ formData: {} });
+                $("#myModal").getKendoWindow().center().open();
+            });
+        });
+
+        function loadWindow() {
+            $("#notification").kendoNotification({
+                autoHideAfter: 1500,
+                position: { top: 30 },
+                width: 400
+            });
+
+            $("#myModal").kendoWindow({
+                visible: false,
+                modal: true,
+                title: "Add Item",
+                width: 600
+            });
+        }
+
+        function loadForm() {
+            $("#addForm").kendoForm({
+                items: [
+                    {
+                        field: "itemid",
+                        label: "",
+                        editor: (container) => {
+                            $(`<input type='hidden' name='itemid' id='itemid' value='0' />`)
+                                .appendTo(container);
+                        }
+                    },
+                    {
+                        field: "image",
+                        label: "",
+                        editor: (container) => {
+                            $(`<input type='hidden' name='image' id='image' />`)
+                                .appendTo(container);
+                        }
+                    },
+                    {
+                        field: "name",
+                        label: "Name: ",
+                        validation: true
+                    },
+                    {
+                        field: "category",
+                        label: "Category: ",
+                        editor: categoryEditor
+                    },
+                    {
+                        field: "itemImage",
+                        label: "Item Image: ",
+                        editor: imageEditor
+                    },
+                    {
+                        field: "unitCost",
+                        label: "Unit Cost: ",
+                        validation: true
+                    },
+                    {
+                        field: "totalStock",
+                        label: "Total Stock: ",
+                        validation: true
+                    },
+                    {
+                        field: "currentStock",
+                        label: "Current Stock: ",
+                        validation: true
+                    },
+                ],
+
+                submit: function (e) {
+                    e.preventDefault();
+                    
+                    var RegisterData = new FormData($("#addForm")[0]);
+                    
+                    var itemId = $("#itemid").val();
+                    let url = itemId == 0
+                        ? "../Item/Add"
+                        : "../Item/Edit";
+
+                    $.ajax({
+                        url: url,
+                        type: "POST",
+                        contentType: false,
+                        processData: false,
+                        data: RegisterData,
+                        success: function (data) {
+                            $("#myModal").data("kendoWindow").close();
+                            $("#notification").data("kendoNotification").show(data.message, "success");
+                            setTimeout(function (){
+                                window.location.reload();
+                            },1000);
+                        },
+                        error: function (err) {
+                            $("#notification").data("kendoNotification")
+                                .show(err.responseJSON.message, "error");
+                        }
+                    });
+                }
+            });
+
+            function categoryEditor(container, options) {
+                $('<input name="' + options.field + '"  required />')
+                    .appendTo(container)
+                    .kendoDropDownList({
+                        dataSource: ["Stationary", "Mobile", "Electroinics"],
+                        optionLabel: "Select Category..."
+                    });
+            }
+
+            function imageEditor(container, options) {
+                $('<input type="file" name="' + options.field + '" />')
+                    .appendTo(container)
+                    .kendoUpload({
+                        multiple: false
+                    });
+            }
+        }
+
+        function loadGrid() {
+
+            $.ajax({
+                url: "/Item/GetItems",
+                success: function (data) {
+                    loadForm();
+
+                    $("#grid").kendoGrid({
+                        dataSource: {
+                            data,
+                            schema: {
+                                model: {
+                                    fields: {
+                                        itemid: { type: "number" },
+                                        name: { type: "string" },
+                                        category: { type: "string" },
+                                        image: { type: "file" },
+                                        unitCost: { type: "number" },
+                                        totalStock: { type: "number" },
+                                        currentStock: { type: "number" },
+                                    }
+                                }
+                            },
+                            pageSize: 10
+                        },
+                        toolbar:["search", "pdf"],
+                        reorderable:true,
+                        filterable: true,
+                        pageable: true,
+
+                        columns: [
+                            {
+                                field: "itemid",
+                                label: "Item ID"
+                            },
+                            {
+                                field: "name",
+                                label: "Name"
+                            },
+                            {
+                                field: "category",
+                                label: "Category"
+                            },
+                            {
+                                field: "image",
+                                title: "Image",
+                                template: function (dataItem) {
+                                    // assuming your images are stored in /uploads/
+                                    return `<img src="/item_images/${dataItem.image}" alt="" style="width:60px;height:60px;border-radius:6px;object-fit:cover;" />`;
+                                }
+                            },
+                            {
+                                field: "unitCost",
+                                label: "Unit Cost"
+                            },
+                            {
+                                field: "totalStock",
+                                label: "Total Stock"
+                            },
+                            {
+                                field: "currentStock",
+                                label: "Current Stock"
+                            },
+                            {
+                                title: "Actions",
+                                template: `<button class='k-button k-button-solid-info k-button-lg' onclick="editData(#=itemid#)">Edit</button>
+                                <button class='k-button k-button-solid-error k-button-lg' onclick="deleteData(#=itemid#)">Delete</button>
+                                `
+                            }
+                            ]
+                    });
+                }
+            });
+        }
+
+        function editData(id){
+            $("#myModal").data("kendoWindow").center().open();
+
+            $.ajax({
+                url:"/Item/GetItemById/" + id,
+                method: "GET",
+                dataType: "Json",
+                success: function(data){
+                    var form=$("#addForm").data("kendoForm");
+                    if(form){
+                        form.setOptions({
+                            formData:{
+                                itemid:id,
+                                name: data.name,
+                                category: data.category,
+                                image: data.image,
+                                unitCost: data.unitCost,
+                                totalStock: data.totalStock,
+                                currentStock: data.currentStock
+                            }
+                        });
+                    }
+                    console.log(form);
+                },
+                error: function(err){
+                    $("#notification").data("kendoNotification").show(err.responseJSON.message || "Error loading data", "error");
+                }
+            });
+        }
+
+        function deleteData(id){
+            if(!confirm("Are you sure to want delete this amazing item?")) return;
+
+            $.ajax({
+                url:"/Item/Delete/" + id,
+                type: "POST",
+                success: function(data){
+                    $("#notification").data("kendoNotification").show(data.message, "success");
+                    window.location.reload();
+                },
+                error: function(err){
+                    $("#notification").data("kendoNotification").show(err.responseJSON.message || "Server Error", "error");
+                }
+            });
+        }
+    </script>
+}

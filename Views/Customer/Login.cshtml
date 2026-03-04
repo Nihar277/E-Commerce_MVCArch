@@ -1,0 +1,87 @@
+@{
+    ViewData["Title"] = "Login Page";
+}
+
+<div class="container mt-5" style="border:1px solid #ccc; width:70%; padding: 20px;">
+    <h3>Login</h3>
+    <form id="loginform"></form>
+</div>
+<div id="msg"></div>
+<div id="notification"></div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $("#notification").kendoNotification({
+                autoHideAfter: 1500,
+                position: { top: 30 },
+                width: 400
+            });
+
+            $("#loginform").kendoForm({
+                validatable: true,
+                items: [
+                    {
+                        field: "Email",
+                        label: "Email: ",
+                        validation: {
+                            required: { message: "Please enter your email" },
+                            email: { message: "Invalid email formate" }
+                        }
+                    },
+                    {
+                        field: "Password",
+                        label: "Password: ",
+                        editor: passwordEditor
+                    }
+                ],
+
+                buttonTemplate: '<button class="k-button k-button-primary" type="submit">Login</button>',
+
+                submit: function (e) {
+                    e.preventDefault();
+
+                    var fd = new FormData();
+                    fd.append("Email", e.model.Email);
+                    fd.append("Password", e.model.Password);
+
+                    $.ajax({
+                        url: "/Customer/Login",
+                        type: "POST",
+                        processData: false,
+                        contentType: false,
+                        data: fd,
+                        success: function (data) {
+                            if (data.success) {
+                                console.log(data.customerData);
+                                sessionStorage.setItem("Customerid", data.customerData.customerid);
+                                sessionStorage.setItem("CustomerData", JSON.stringify(data.customerData));
+                                $("#notification").data("kendoNotification").show("Login Successful!", "success");
+                                var id=data.customerData.customerid;
+                                console.log(id);
+                                if(id==0){
+                                    setTimeout(() => window.location.href = "/Customer/ItemDashboard", 1300);
+                                }
+                                else{
+                                    setTimeout(() => window.location.href = "/Customer/UserDashboard", 1300);
+                                }
+                                
+                            } else {
+                                $("#msg").html("<div class='k-messagebox k-messagebox-error'>" + data.message + "</div>");
+                            }
+                        },
+                        error: function (err) {
+                            $("#msg").html("<div class='k-messagebox k-messagebox-error'>Something Went Wrong!</div>");
+                        }
+                    });
+                }
+            });
+
+            function passwordEditor(container, options){
+                $('<input type="password" class="k-textbox" name="' + options.field + '" placeholder="Enter Password..." required/>')
+                    .appendTo(container)
+                    .kendoTextBox();
+            }
+        });
+    </script>
+}

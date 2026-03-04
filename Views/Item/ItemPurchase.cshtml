@@ -1,0 +1,125 @@
+@{
+    ViewData["Title"]="Item Purchase";
+    Layout="_HomeLayout";
+}
+@model ItemModel;
+
+<h3>Item Purchase</h3>
+
+<div id="notification"></div>
+<form id="itemForm" method="post"></form>
+
+@section Scripts{
+    <script>
+        $(document).ready(function () {
+            loadForm();
+        });
+
+        function loadWidow(){
+            $("#notification").kendonotification({
+                autoHideAfter: 1600,
+                position: {top:30},
+                width: 400
+            });
+        }
+
+        function loadForm(){
+            $("#itemForm").kendoForm({
+                validatable: true,
+                formData: {
+                    itemid:"@Model.Itemid",
+                    name:"@Model.Name",
+                    unitCost:"@Model.UnitCost",
+                    currentStock:"@Model.CurrentStock" 
+                },
+                items:[
+                    {
+                        field:"itemid",
+                        label:"",
+                        editor:(container)=>{
+                            $(`<input type='hidden' name='itemid', id='itemid' value='0' />`)
+                                .appendTo(container);
+                        }
+                    },
+                    {
+                        field:"name",
+                        label: "Name",
+                        editor:(container)=>{
+                            $(`<input type='text' name='name', id='name' readonly/>`)
+                                .appendTo(container)
+                                .kendoTextBox();
+
+                        }
+                    },
+                    {
+                        field:"unitCost",
+                        label:"Unit Cost",
+                        editor:(container)=>{
+                            $(`<input type='text' name='unitCost', id='unitCost' readonly/>`)
+                                .appendTo(container)
+                                .kendoTextBox();
+                        }
+                    },
+                    {
+                        field:"currentStock",
+                        label:"Current Stock",
+                        editor:(container)=>{
+                            $(`<input type='text' name='currentStock', id='currentStock' readonly/>`)
+                                .appendTo(container)
+                                .kendoTextBox();
+                        }
+                    },
+                    {
+                        field:"quantity",
+                        label:"Quantity",
+                        editor: (container)=>{
+                            $(`<input name='quantity', id='quantity'/>`)
+                                .appendTo(container)
+                                .kendoNumericTextBox({
+                                    max: @Model.CurrentStock,
+                                    min:1,
+                                    format: "n0",
+                                    change: function(){
+                                        var quty=this.value();
+                                        var price=@Model.UnitCost;
+                                        var totalcost=quty*price;
+                                        $("#totalcost").val(totalcost);
+                                    }
+                                });
+                        }
+                    },
+                    {
+                        field:"totalcost",
+                        label:"Total Cost",
+                    }
+                ],
+
+                buttonsTemplate:`<button type='submit' class='k-button k-button-solid-info' style='padding:5px;'>Place Order</button>
+                            <a href='/Customer/UserDashboard' style='background-color:darkred; padding:5px; color:white;'>Back<a/>`,
+                
+                submit: function(e){
+                    e.preventDefault();
+                    var id=sessionStorage.getItem("Customerid");
+                    var formData=e.model;
+                    var ItemData=new FormData($("#itemForm")[0]);
+                    ItemData.append("Customerid", id);
+                    var itemId=$("#itemid").val();
+
+                    $.ajax({
+                        url: "/Item/AddItemOrder",
+                        type: "POST",
+                        processData: false,
+                        contentType: false,
+                        data: ItemData,
+                        success:function(data){
+                            window.location.href="/Item/OrderPage";
+                        },
+                        error: function(err){
+                            $("#notification").data("notification").show(err.responseJSON.message || "Error");
+                        }
+                    })
+                }
+            })
+        }
+    </script>
+}

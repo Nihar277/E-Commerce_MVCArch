@@ -1,0 +1,77 @@
+@{
+    ViewData["Title"] = "Order Page";
+    Layout="_HomeLayout";
+}
+
+<div id="grid"></div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            loadGrid();
+        })
+
+
+        function loadGrid() {
+            var id = sessionStorage.getItem("Customerid");
+
+            $.ajax({
+                url: "/Item/GetOrderById/" + id,
+                success: function (data) {
+
+                    $("#grid").kendoGrid({
+                        dataSource: {
+                            data,
+                            schema: {
+                                model: {
+                                    fields: {
+                                        orderid: { type: "number" },
+                                        itemid: { type: "number" },
+                                        itemName: { type: "string" },
+                                        quantity: { type: "number" },
+                                        totalCost: { type: "number" },
+                                        image: { type: "file" }
+                                    }
+                                }
+                            },
+                                pageSize: 10
+                        },
+                        reorderable: true,
+                        pageable: true,
+                        filterable: true,
+                        columns: [
+                            {
+                                field: "orderid",
+                                label: "Order ID"
+                            },
+                            {
+                                field: "itemid",
+                                label: "Item ID"
+                            },
+                            {
+                                field: "itemName",
+                                label: "Item Name"
+                            },
+                            {
+                                field: "quantity",
+                                label: "Quantity"
+                            },
+                            {
+                                field: "totalCost",
+                                label: "Total Cost"
+                            },
+                            {
+                                field: "image",
+                                title: "Image",
+                                template: function (dataItem) {
+                                    // assuming your images are stored in /uploads/
+                                    return `<img src="/item_images/${dataItem.image}" alt="" style="width:60px;height:60px;border-radius:6px;object-fit:cover;" />`;
+                                }
+                            },
+                        ]
+                    });
+                }
+            });
+        }
+    </script>
+}
